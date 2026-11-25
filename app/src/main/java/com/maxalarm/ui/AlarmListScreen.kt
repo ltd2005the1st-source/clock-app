@@ -244,7 +244,8 @@ private fun VolumeNote() {
                 Text("Always at full volume", style = MaterialTheme.typography.titleSmall)
                 Text(
                     "Every alarm rings at your phone's maximum alarm volume, and the volume keys can't " +
-                        "lower it. To silence a ringing alarm, complete all $SNOOZE_STEPS snooze steps.",
+                        "lower it. A ringing alarm has no stop button: finish all $SNOOZE_STEPS steps, then choose " +
+                        "Snooze or Turn off for today.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

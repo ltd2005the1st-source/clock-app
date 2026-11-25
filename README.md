@@ -3,15 +3,16 @@
 An Android alarm clock (Kotlin, Jetpack Compose, Material 3 with Material You dynamic color) built around two rules:
 
 1. **Every alarm rings at the device's maximum alarm volume, and that can't be changed.** There is no volume setting. While an alarm rings, the app sets the alarm stream to its maximum and puts it back to maximum within 0.2 s of any change (volume keys, quick settings, other apps). It also adds a little digital gain on top (`LoudnessEnhancer`). The volume keys do nothing on the ringing screen. Once the alarm is snoozed, the alarm volume goes back to where you had it.
-2. **A ringing alarm can only be silenced by 20 different actions.** No dismiss button, no stop action in the notification, Back does nothing. Each ring presents all 20 actions in a fresh random order; finishing the last one snoozes the alarm.
+2. **A ringing alarm can only be silenced by 20 different actions.** No dismiss or snooze button, no actions in the notification, Back does nothing. Each ring presents all 20 actions in a fresh random order. Only after the last one do two buttons appear: **Snooze** and **Turn off for today**. The alarm keeps ringing until you pick one.
 
 ## The 20 actions
 
 Tap · double-tap · press and hold · swipe left · swipe right · swipe up · swipe down · catch a moving dot · type a word · solve a sum · drag a slider to the end · flip a switch · hold with two fingers · pick a named color · tick five boxes · key in a code · shake the phone · tap the largest number · tap tiles 1–6 in order · set a counter to a target.
 
-## What snooze means
+## After the 20 actions
 
-Finishing all 20 steps snoozes for the alarm's snooze length (1, 5, 10, 15 or 30 minutes, set per alarm), then it rings again and needs another 20 steps. A snooze can't be cancelled from the app, and deleting or switching off the alarm doesn't cancel a snooze already pending. There is no "turn off" anywhere: as written, a snoozed alarm keeps coming back.
+- **Snooze** stops the sound for the alarm's snooze length (1, 5, 10, 15 or 30 minutes, set per alarm). Then it rings again and needs all 20 actions again. A snooze can't be cancelled from the app, and deleting or switching off the alarm doesn't cancel a snooze already pending.
+- **Turn off for today** stops it with no snooze. A repeating alarm rings again on its next day; a one-off alarm is done.
 
 If the phone is switched off while an alarm is ringing, it rings again a few seconds after the phone boots, including before you unlock it.
 

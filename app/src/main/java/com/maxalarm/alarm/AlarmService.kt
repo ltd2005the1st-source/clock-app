@@ -27,8 +27,8 @@ import com.maxalarm.data.AlarmStore
 import com.maxalarm.ui.ringing.RingingActivity
 
 /**
- * Foreground service that owns a ringing alarm. It has no "stop" or "dismiss" action:
- * the only way out is [ACTION_SNOOZE], which it accepts only after all 20 steps are done.
+ * Foreground service that owns a ringing alarm. Its notification has no actions. The only ways
+ * out are [ACTION_SNOOZE] and [ACTION_TURN_OFF], accepted only after all 20 steps are done.
  */
 class AlarmService : Service() {
 
@@ -46,9 +46,9 @@ class AlarmService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val ringing = store.ringing()
-        val isSnooze = intent?.action == ACTION_SNOOZE
+        val isChoice = intent?.action == ACTION_SNOOZE || intent?.action == ACTION_TURN_OFF
         // Set up the session before the full-screen notification can open the ringing screen.
-        if (!isSnooze && ringing.isNotEmpty()) RingSession.ensure(ringing)
+        if (!isChoice && ringing.isNotEmpty()) RingSession.ensure(ringing)
         // Always go foreground first: a service started with startForegroundService must.
         try {
             startInForeground(buildNotification(ringing))
@@ -56,7 +56,7 @@ class AlarmService : Service() {
             // Android can refuse a foreground start from the background (for example when the
             // system restarts us after killing us). Hand the alarm back to AlarmManager, whose
             // alarm-clock broadcasts are allowed to start us, so it rings again in a second.
-            if (!isSnooze) {
+            if (!isChoice) {
                 store.clearRinging()
                 ringing.forEach {
                     AlarmScheduler.scheduleSnooze(this, store.addSnooze(it, System.currentTimeMillis() + 1_000))
@@ -67,13 +67,21 @@ class AlarmService : Service() {
             return START_NOT_STICKY
         }
 
-        if (isSnooze) {
+        if (isChoice) {
             val session = RingSession.state.value
+            // Snooze and turn-off are only honoured once all 20 steps are done.
             if (session != null && session.isComplete) {
-                snooze(session.alarms.ifEmpty { ringing }, session.snoozeMinutes)
+                if (intent?.action == ACTION_SNOOZE) {
+                    snooze(session.alarms.ifEmpty { ringing }, session.snoozeMinutes)
+                } else {
+                    // Turn off for today: no snooze is scheduled. A repeating alarm was already
+                    // rescheduled for its next day when it started ringing; a one-off alarm was
+                    // already switched off.
+                    finish()
+                }
                 return START_NOT_STICKY
             }
-            // Snooze asked for without finishing the steps: ignore it and keep ringing.
+            // Asked without finishing the steps: ignore it and keep ringing.
         }
 
         if (ringing.isEmpty()) {
@@ -175,7 +183,7 @@ class AlarmService : Service() {
         return NotificationCompat.Builder(this, MaxAlarmApp.CHANNEL_RINGING)
             .setSmallIcon(R.drawable.ic_stat_alarm)
             .setContentTitle(title)
-            .setContentText("Complete all $SNOOZE_STEPS steps to snooze. Tap to open.")
+            .setContentText("Complete all $SNOOZE_STEPS steps to snooze or turn it off. Tap to open.")
             .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
@@ -191,6 +199,7 @@ class AlarmService : Service() {
         private const val NOTIFICATION_ID = 42
         const val ACTION_RING = "com.maxalarm.action.START_RINGING"
         const val ACTION_SNOOZE = "com.maxalarm.action.SNOOZE"
+        const val ACTION_TURN_OFF = "com.maxalarm.action.TURN_OFF"
 
         fun ring(context: Context, alarm: Alarm) {
             AlarmStore.get(context).addRinging(alarm)
@@ -199,7 +208,14 @@ class AlarmService : Service() {
             )
         }
 
-        /** Called by the ringing screen once all 20 steps are done. */
+        /** Called by the ringing screen once all 20 steps are done and the user picks "Turn off for today". */
+        fun requestTurnOff(context: Context) {
+            ContextCompat.startForegroundService(
+                context, Intent(context, AlarmService::class.java).setAction(ACTION_TURN_OFF),
+            )
+        }
+
+        /** Called by the ringing screen once all 20 steps are done and the user picks "Snooze". */
         fun requestSnooze(context: Context) {
             ContextCompat.startForegroundService(
                 context, Intent(context, AlarmService::class.java).setAction(ACTION_SNOOZE),

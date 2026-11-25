@@ -19,9 +19,13 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.AlarmOff
 import androidx.compose.material.icons.outlined.Snooze
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
@@ -46,8 +50,10 @@ import java.time.LocalTime
 @Composable
 fun RingingScreen(
     state: RingSession.State?,
-    snoozedFor: Int?,
+    outcome: RingOutcome?,
     onStepDone: (Int) -> Unit,
+    onSnooze: () -> Unit,
+    onTurnOff: () -> Unit,
 ) {
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surface) {
         Column(
@@ -60,7 +66,8 @@ fun RingingScreen(
         ) {
             Clock(label = state?.alarms?.lastOrNull()?.label)
             when {
-                snoozedFor != null -> SnoozedMessage(snoozedFor)
+                outcome != null -> OutcomeMessage(outcome)
+                state != null && state.isComplete -> Choice(state.snoozeMinutes, onSnooze, onTurnOff)
                 state != null -> Steps(state, onStepDone)
             }
         }
@@ -144,12 +151,65 @@ private fun Steps(state: RingSession.State, onStepDone: (Int) -> Unit) {
         }
     }
     Text(
-        "There's no dismiss button. Finish every step to snooze.",
+        "Snooze and turn-off appear after all $SNOOZE_STEPS steps.",
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         textAlign = TextAlign.Center,
         modifier = Modifier.fillMaxWidth(),
     )
+}
+
+sealed interface RingOutcome {
+    data class Snoozed(val minutes: Int) : RingOutcome
+    data object TurnedOff : RingOutcome
+}
+
+/** Shown only once all 20 steps are done. The alarm keeps ringing until one is picked. */
+@Composable
+private fun Choice(snoozeMinutes: Int, onSnooze: () -> Unit, onTurnOff: () -> Unit) {
+    Column(
+        Modifier.fillMaxWidth().padding(top = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        Text("All $SNOOZE_STEPS steps done", style = MaterialTheme.typography.headlineSmall)
+        Text(
+            "Pick one to stop the sound.",
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(8.dp))
+        Button(onClick = onSnooze, modifier = Modifier.fillMaxWidth().height(72.dp)) {
+            Icon(Icons.Outlined.Snooze, contentDescription = null)
+            Spacer(Modifier.width(12.dp))
+            Text("Snooze $snoozeMinutes min", style = MaterialTheme.typography.titleLarge)
+        }
+        FilledTonalButton(onClick = onTurnOff, modifier = Modifier.fillMaxWidth().height(72.dp)) {
+            Icon(Icons.Outlined.AlarmOff, contentDescription = null)
+            Spacer(Modifier.width(12.dp))
+            Text("Turn off for today", style = MaterialTheme.typography.titleLarge)
+        }
+    }
+}
+
+@Composable
+private fun OutcomeMessage(outcome: RingOutcome) {
+    when (outcome) {
+        is RingOutcome.Snoozed -> SnoozedMessage(outcome.minutes)
+        RingOutcome.TurnedOff -> Column(
+            Modifier.fillMaxWidth().padding(top = 48.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Icon(
+                Icons.Outlined.AlarmOff,
+                contentDescription = null,
+                modifier = Modifier.size(64.dp),
+                tint = MaterialTheme.colorScheme.primary,
+            )
+            Text("Off for today", style = MaterialTheme.typography.headlineMedium)
+        }
+    }
 }
 
 @Composable

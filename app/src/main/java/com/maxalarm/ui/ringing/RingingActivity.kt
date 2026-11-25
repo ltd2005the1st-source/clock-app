@@ -22,8 +22,8 @@ import com.maxalarm.ui.theme.MaxAlarmTheme
 import kotlinx.coroutines.delay
 
 /**
- * The ringing screen. There is no dismiss button, Back does nothing and the volume keys
- * are swallowed. The 20 snooze steps are the only way out.
+ * The ringing screen. Back does nothing and the volume keys are swallowed. Snooze and
+ * "Turn off for today" appear only after all 20 steps are done; until then there is no way out.
  */
 class RingingActivity : ComponentActivity() {
 
@@ -39,27 +39,34 @@ class RingingActivity : ComponentActivity() {
         setContent {
             MaxAlarmTheme(darkTheme = true) {
                 val state by RingSession.state.collectAsStateWithLifecycle()
-                var snoozedFor by remember { mutableStateOf<Int?>(null) }
+                var outcome by remember { mutableStateOf<RingOutcome?>(null) }
                 val current = state
 
-                LaunchedEffect(current?.isComplete) {
-                    if (current != null && current.isComplete && snoozedFor == null) {
-                        snoozedFor = current.snoozeMinutes
-                        AlarmService.requestSnooze(this@RingingActivity)
-                    }
-                }
-                LaunchedEffect(current == null, snoozedFor) {
+                LaunchedEffect(current == null, outcome) {
                     if (current == null) {
-                        // Nothing ringing: either we just snoozed (show the confirmation briefly) or this is stale.
-                        if (snoozedFor != null) delay(2_500)
+                        // Nothing ringing: either the user just chose (show the confirmation briefly) or this is stale.
+                        if (outcome != null) delay(2_500)
                         finish()
                     }
                 }
 
                 RingingScreen(
                     state = current,
-                    snoozedFor = snoozedFor,
+                    outcome = outcome,
                     onStepDone = { RingSession.completeStep(it) },
+                    // These two only exist on screen after all 20 steps; the service re-checks too.
+                    onSnooze = {
+                        if (current != null && current.isComplete && outcome == null) {
+                            outcome = RingOutcome.Snoozed(current.snoozeMinutes)
+                            AlarmService.requestSnooze(this@RingingActivity)
+                        }
+                    },
+                    onTurnOff = {
+                        if (current != null && current.isComplete && outcome == null) {
+                            outcome = RingOutcome.TurnedOff
+                            AlarmService.requestTurnOff(this@RingingActivity)
+                        }
+                    },
                 )
             }
         }
