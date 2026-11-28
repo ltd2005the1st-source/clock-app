@@ -63,7 +63,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import com.maxalarm.core.Alarm
 import com.maxalarm.core.PendingSnooze
-import com.maxalarm.core.SNOOZE_STEPS
 import com.maxalarm.core.Schedule
 import kotlinx.coroutines.delay
 import java.time.Instant
@@ -77,6 +76,7 @@ fun AlarmListScreen(
     onAdd: () -> Unit,
     onOpen: (Alarm) -> Unit,
     onToggle: (Alarm, Boolean) -> Unit,
+    bottomBar: @Composable () -> Unit = {},
 ) {
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val now by produceState(ZonedDateTime.now()) {
@@ -95,6 +95,7 @@ fun AlarmListScreen(
                 scrollBehavior = scrollBehavior,
             )
         },
+        bottomBar = bottomBar,
         floatingActionButton = {
             ExtendedFloatingActionButton(
                 onClick = onAdd,
@@ -115,7 +116,7 @@ fun AlarmListScreen(
         ) {
             item { NextAlarmLine(alarms, snoozes, now) }
             item { SetupCard() }
-            items(snoozes, key = { "snooze-${it.requestCode}" }) { SnoozeCard(it) }
+            items(snoozes.filterNot { it.isCountdown }, key = { "snooze-${it.requestCode}" }) { SnoozeCard(it) }
             if (alarms.isEmpty()) {
                 item { EmptyState() }
             }
@@ -132,7 +133,7 @@ private fun NextAlarmLine(alarms: List<Alarm>, snoozes: List<PendingSnooze>, now
     val zone = ZoneId.systemDefault()
     val next = (
         alarms.filter { it.enabled }.map { Schedule.nextOccurrence(it, now) } +
-            snoozes.map { Instant.ofEpochMilli(it.triggerAtMillis).atZone(zone) }
+            snoozes.filterNot { it.isCountdown }.map { Instant.ofEpochMilli(it.triggerAtMillis).atZone(zone) }
         ).minOrNull()
     Text(
         text = if (next == null) "No alarms set" else "Next alarm ${Schedule.describeUntil(now, next)}",
@@ -199,7 +200,9 @@ private fun SnoozeCard(snooze: PendingSnooze) {
             Icon(Icons.Outlined.Snooze, contentDescription = null)
             Spacer(Modifier.width(16.dp))
             Column {
-                val name = snooze.alarm.label.ifBlank { "Alarm" }
+                val name = snooze.alarm.label.ifBlank {
+                    if (snooze.alarm.id == Alarm.COUNTDOWN_ID) "Countdown" else "Alarm"
+                }
                 Text("$name snoozed", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 Text(
                     "Rings again at ${TimeText.full(context, at)}. A snoozed alarm can't be cancelled.",
@@ -244,7 +247,8 @@ private fun VolumeNote() {
                 Text("Always at full volume", style = MaterialTheme.typography.titleSmall)
                 Text(
                     "Every alarm rings at your phone's maximum alarm volume, and the volume keys can't " +
-                        "lower it. To silence a ringing alarm, complete all $SNOOZE_STEPS snooze steps.",
+                        "lower it. A ringing alarm has no stop button: finish all of its tasks (10 or 20), " +
+                        "then choose Snooze or Turn off for today.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

@@ -9,15 +9,27 @@ import kotlin.random.Random
 class ChallengesTest {
     @Test fun exactlyTwentyDistinctActions() {
         assertEquals(20, SNOOZE_STEPS)
-        val plan = ChallengePlan.create(Random(1))
+        val plan = ChallengePlan.create(random = Random(1))
         assertEquals(20, plan.size)
         assertEquals(20, plan.map { it.type }.toSet().size)
         assertEquals((0 until 20).toList(), plan.map { it.index })
     }
 
+    @Test fun tenTaskModeUsesTenDistinctActions() {
+        repeat(50) { seed ->
+            val plan = ChallengePlan.create(10, Random(seed))
+            assertEquals(10, plan.size)
+            assertEquals(10, plan.map { it.type }.toSet().size)
+            assertEquals((0 until 10).toList(), plan.map { it.index })
+        }
+        // Different rings pick different subsets, not always the same 10.
+        val picks = (0 until 20).map { ChallengePlan.create(10, Random(it)).map { s -> s.type }.toSet() }.toSet()
+        assertTrue(picks.size > 1)
+    }
+
     @Test fun orderChangesBetweenRings() {
-        val a = ChallengePlan.create(Random(1)).map { it.type }
-        val b = ChallengePlan.create(Random(2)).map { it.type }
+        val a = ChallengePlan.create(random = Random(1)).map { it.type }
+        val b = ChallengePlan.create(random = Random(2)).map { it.type }
         assertNotEquals(a, b)
     }
 

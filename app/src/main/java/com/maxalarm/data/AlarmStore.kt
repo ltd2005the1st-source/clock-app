@@ -45,8 +45,11 @@ class AlarmStore private constructor(context: Context) {
     }
 
     @Synchronized
-    fun addSnooze(alarm: Alarm, triggerAtMillis: Long): PendingSnooze {
-        val snooze = PendingSnooze(nextId("next_snooze_code", SNOOZE_CODE_BASE), alarm, triggerAtMillis)
+    fun addSnooze(alarm: Alarm, triggerAtMillis: Long, isCountdown: Boolean = false): PendingSnooze {
+        val snooze = PendingSnooze(
+            nextId("next_snooze_code", SNOOZE_CODE_BASE), alarm, triggerAtMillis,
+            isCountdown = isCountdown, startedAtMillis = System.currentTimeMillis(),
+        )
         val list = _snoozes.value + snooze
         writeSnoozes(list)
         _snoozes.value = list
@@ -61,6 +64,16 @@ class AlarmStore private constructor(context: Context) {
         writeSnoozes(list)
         _snoozes.value = list
         return snooze
+    }
+
+    /** Cancels a countdown that hasn't rung yet. Real snoozes can't be removed this way. */
+    @Synchronized
+    fun cancelCountdown(requestCode: Int): Boolean {
+        val countdown = _snoozes.value.firstOrNull { it.requestCode == requestCode && it.isCountdown } ?: return false
+        val list = _snoozes.value - countdown
+        writeSnoozes(list)
+        _snoozes.value = list
+        return true
     }
 
     @Synchronized
@@ -103,7 +116,11 @@ class AlarmStore private constructor(context: Context) {
             val arr = JSONArray(raw)
             (0 until arr.length()).map {
                 val o = arr.getJSONObject(it)
-                PendingSnooze(o.getInt("code"), alarmFromJson(o.getJSONObject("alarm")), o.getLong("at"))
+                PendingSnooze(
+                    o.getInt("code"), alarmFromJson(o.getJSONObject("alarm")), o.getLong("at"),
+                    isCountdown = o.optBoolean("countdown", false),
+                    startedAtMillis = o.optLong("started", 0),
+                )
             }
         }.getOrDefault(emptyList())
     }
@@ -111,7 +128,10 @@ class AlarmStore private constructor(context: Context) {
     private fun writeSnoozes(list: List<PendingSnooze>) {
         val arr = JSONArray()
         list.forEach {
-            arr.put(JSONObject().put("code", it.requestCode).put("alarm", alarmToJson(it.alarm)).put("at", it.triggerAtMillis))
+            arr.put(
+                JSONObject().put("code", it.requestCode).put("alarm", alarmToJson(it.alarm)).put("at", it.triggerAtMillis)
+                    .put("countdown", it.isCountdown).put("started", it.startedAtMillis),
+            )
         }
         prefs.edit().putString(KEY_SNOOZES, arr.toString()).commit()
     }
@@ -126,6 +146,7 @@ class AlarmStore private constructor(context: Context) {
         .put("snooze", a.snoozeMinutes)
         .put("vibrate", a.vibrate)
         .put("ringtone", a.ringtoneUri ?: JSONObject.NULL)
+        .put("tasks", a.taskCount)
 
     private fun alarmFromJson(o: JSONObject): Alarm {
         val days = o.optJSONArray("days")
@@ -139,6 +160,7 @@ class AlarmStore private constructor(context: Context) {
             snoozeMinutes = o.optInt("snooze", Alarm.DEFAULT_SNOOZE_MINUTES),
             vibrate = o.optBoolean("vibrate", true),
             ringtoneUri = if (o.isNull("ringtone")) null else o.optString("ringtone"),
+            taskCount = o.optInt("tasks", Alarm.DEFAULT_TASK_COUNT),
         )
     }
 

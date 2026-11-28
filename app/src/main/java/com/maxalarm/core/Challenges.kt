@@ -3,7 +3,7 @@ package com.maxalarm.core
 import kotlin.random.Random
 
 /**
- * The 20 different actions that make up a snooze. A ringing alarm shows all of them,
+ * The 20 different actions. A ringing alarm shows 20 (all of them) or 10 (a random pick),
  * one after another, in a fresh random order every time it rings.
  */
 enum class ChallengeType(val title: String, val instruction: String) {
@@ -29,15 +29,15 @@ enum class ChallengeType(val title: String, val instruction: String) {
     COUNTER("Set the counter", "Use + and − to reach the target number."),
 }
 
-/** Number of actions needed to snooze. Always equal to the number of challenge types. */
+/** The most tasks a ring can ask for: every challenge type once. */
 val SNOOZE_STEPS: Int = ChallengeType.entries.size
 
 data class ChallengeStep(val index: Int, val type: ChallengeType, val seed: Long)
 
 object ChallengePlan {
-    /** All 20 challenge types, each used exactly once, shuffled. */
-    fun create(random: Random = Random.Default): List<ChallengeStep> =
-        ChallengeType.entries.shuffled(random).mapIndexed { i, type ->
+    /** [count] different challenge types (each used at most once), shuffled. */
+    fun create(count: Int = SNOOZE_STEPS, random: Random = Random.Default): List<ChallengeStep> =
+        ChallengeType.entries.shuffled(random).take(count.coerceIn(1, SNOOZE_STEPS)).mapIndexed { i, type ->
             ChallengeStep(index = i, type = type, seed = random.nextLong())
         }
 }

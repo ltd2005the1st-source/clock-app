@@ -6,7 +6,16 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Alarm
+import androidx.compose.material.icons.outlined.HourglassTop
+import androidx.compose.material3.Icon
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -46,6 +55,19 @@ private fun AppRoot() {
     val snoozes by store.snoozes.collectAsStateWithLifecycle()
     val ringing by RingSession.state.collectAsStateWithLifecycle()
     var editing by remember { mutableStateOf<Alarm?>(null) }
+    var tab by rememberSaveable { mutableIntStateOf(0) }
+    val bottomBar: @Composable () -> Unit = {
+        NavigationBar {
+            NavigationBarItem(
+                selected = tab == 0, onClick = { tab = 0 },
+                icon = { Icon(Icons.Outlined.Alarm, contentDescription = null) }, label = { Text("Alarms") },
+            )
+            NavigationBarItem(
+                selected = tab == 1, onClick = { tab = 1 },
+                icon = { Icon(Icons.Outlined.HourglassTop, contentDescription = null) }, label = { Text("Countdown") },
+            )
+        }
+    }
 
     // If an alarm goes off while the app is open, jump straight to the ringing screen.
     val isRinging = ringing != null
@@ -59,7 +81,9 @@ private fun AppRoot() {
     BackHandler(enabled = editing != null) { editing = null }
 
     val current = editing
-    if (current == null) {
+    if (current == null && tab == 1) {
+        CountdownScreen(countdowns = snoozes.filter { it.isCountdown }, bottomBar = bottomBar)
+    } else if (current == null) {
         AlarmListScreen(
             alarms = alarms,
             snoozes = snoozes,
@@ -72,6 +96,7 @@ private fun AppRoot() {
                 val saved = Alarms.setEnabled(context, alarm, on)
                 if (on) toastNext(context, saved)
             },
+            bottomBar = bottomBar,
         )
     } else {
         EditAlarmScreen(
