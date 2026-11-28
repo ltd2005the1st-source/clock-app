@@ -20,13 +20,17 @@ object RingSession {
         val current: ChallengeStep? get() = steps.getOrNull(completed)
         /** When several alarms ring together, the shortest snooze wins. */
         val snoozeMinutes: Int get() = alarms.minOf { it.snoozeMinutes }
+        val isCountdown: Boolean get() = alarms.all { it.id == com.maxalarm.core.Alarm.COUNTDOWN_ID }
     }
 
     private val _state = MutableStateFlow<State?>(null)
     val state: StateFlow<State?> = _state.asStateFlow()
 
     fun ensure(alarms: List<Alarm>) {
-        _state.update { it?.copy(alarms = alarms) ?: State(alarms, ChallengePlan.create(), 0) }
+        // Several alarms ringing together use the largest task count among them.
+        _state.update {
+            it?.copy(alarms = alarms) ?: State(alarms, ChallengePlan.create(alarms.maxOf { a -> a.taskCount }), 0)
+        }
     }
 
     /** Advances only if [index] is the step currently showing, so double taps can't skip steps. */

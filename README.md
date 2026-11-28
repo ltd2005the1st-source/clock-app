@@ -3,7 +3,7 @@
 An Android alarm clock (Kotlin, Jetpack Compose, Material 3 with Material You dynamic color) built around two rules:
 
 1. **Every alarm rings at the device's maximum alarm volume, and that can't be changed.** There is no volume setting. While an alarm rings, the app sets the alarm stream to its maximum and puts it back to maximum within 0.2 s of any change (volume keys, quick settings, other apps). It also adds a little digital gain on top (`LoudnessEnhancer`). The volume keys do nothing on the ringing screen. Once the alarm is snoozed, the alarm volume goes back to where you had it.
-2. **A ringing alarm can only be silenced by 20 different actions.** No dismiss or snooze button, no actions in the notification, Back does nothing. Each ring presents all 20 actions in a fresh random order. Only after the last one do two buttons appear: **Snooze** and **Turn off for today**. The alarm keeps ringing until you pick one.
+2. **A ringing alarm can only be silenced by 20 (or, if you choose, 10) different actions.** No dismiss or snooze button, no actions in the notification, Back does nothing. Each ring presents all 20 actions, or a random 10 of them, in a fresh random order. Only after the last one do two buttons appear: **Snooze** and **Turn off for today**. The alarm keeps ringing until you pick one.
 
 ## The 20 actions
 
@@ -16,7 +16,13 @@ Tap · double-tap · press and hold · swipe left · swipe right · swipe up · 
 
 If the phone is switched off while an alarm is ringing, it rings again a few seconds after the phone boots, including before you unlock it.
 
+## Countdown mode
+
+The Countdown tab sets a duration (hours, minutes, seconds, or a preset) instead of a clock time. When it runs out it rings exactly like an alarm: maximum volume, the same tasks, then Snooze or Turn off. A countdown can be cancelled while it's still counting; once it rings, only the tasks stop it.
+
 ## Other features
+
+- Per alarm or countdown: 10 or 20 tasks to silence it.
 
 - Alarm list with next-alarm countdown, one-off or repeating alarms (pick days), labels, per-alarm sound (no "Silent" option) and vibration.
 - A setup card on the main screen for the permissions that keep alarms reliable: notifications, full-screen alarms (Android 14+), exact alarms (Android 12), battery optimization, and optional Do Not Disturb access so alarms ring even in "Total silence".

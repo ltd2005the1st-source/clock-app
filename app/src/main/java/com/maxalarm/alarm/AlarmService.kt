@@ -22,7 +22,6 @@ import androidx.core.content.ContextCompat
 import com.maxalarm.MaxAlarmApp
 import com.maxalarm.R
 import com.maxalarm.core.Alarm
-import com.maxalarm.core.SNOOZE_STEPS
 import com.maxalarm.data.AlarmStore
 import com.maxalarm.ui.ringing.RingingActivity
 
@@ -179,11 +178,12 @@ class AlarmService : Service() {
             this, 0, RingingActivity.intent(this),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
-        val title = ringing.lastOrNull()?.label?.takeIf { it.isNotBlank() } ?: "Alarm"
+        val title = ringing.lastOrNull()?.label?.takeIf { it.isNotBlank() }
+            ?: if (ringing.lastOrNull()?.id == Alarm.COUNTDOWN_ID) "Countdown finished" else "Alarm"
         return NotificationCompat.Builder(this, MaxAlarmApp.CHANNEL_RINGING)
             .setSmallIcon(R.drawable.ic_stat_alarm)
             .setContentTitle(title)
-            .setContentText("Complete all $SNOOZE_STEPS steps to snooze or turn it off. Tap to open.")
+            .setContentText("Finish all the tasks to snooze or turn it off. Tap to open.")
             .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)

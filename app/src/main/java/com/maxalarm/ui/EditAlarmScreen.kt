@@ -144,6 +144,8 @@ fun EditAlarmScreen(
                 DayPicker(draft.days) { draft = draft.copy(days = it) }
             }
 
+            TaskCountPicker(draft.taskCount) { draft = draft.copy(taskCount = it) }
+
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Snooze length", style = MaterialTheme.typography.titleSmall)
                 SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
@@ -243,5 +245,50 @@ private fun DayPicker(selected: Set<DayOfWeek>, onChange: (Set<DayOfWeek>) -> Un
                 )
             }
         }
+    }
+}
+
+/** "Tasks to silence": 10 or 20 different actions before Snooze / Turn off appear. */
+@Composable
+fun TaskCountPicker(selected: Int, onChange: (Int) -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text("Tasks to silence", style = MaterialTheme.typography.titleSmall)
+        SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+            Alarm.TASK_COUNT_CHOICES.forEachIndexed { i, count ->
+                SegmentedButton(
+                    selected = selected == count,
+                    onClick = { onChange(count) },
+                    shape = SegmentedButtonDefaults.itemShape(i, Alarm.TASK_COUNT_CHOICES.size),
+                    label = { Text("$count tasks") },
+                )
+            }
+        }
+        Text(
+            "Different actions you must finish before Snooze and Turn off appear.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@Composable
+fun SnoozeLengthPicker(selected: Int, onChange: (Int) -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text("Snooze length", style = MaterialTheme.typography.titleSmall)
+        SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+            Alarm.SNOOZE_CHOICES.forEachIndexed { i, minutes ->
+                SegmentedButton(
+                    selected = selected == minutes,
+                    onClick = { onChange(minutes) },
+                    shape = SegmentedButtonDefaults.itemShape(i, Alarm.SNOOZE_CHOICES.size),
+                    label = { Text("$minutes") },
+                )
+            }
+        }
+        Text(
+            "Minutes until a snoozed alarm rings again.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
